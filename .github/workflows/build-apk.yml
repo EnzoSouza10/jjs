@@ -26,11 +26,13 @@ jobs:
             --workdir /home/user/hostcwd \
             --entrypoint bash \
             ghcr.io/kivy/buildozer:latest \
-            -lc "yes | buildozer --verbose android debug" 2>&1 | tee buildozer-build.log
+            -lc "yes | buildozer android debug" 2>&1 | tee buildozer-build.log
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ]; then
-            echo "Buildozer failed. Last 250 log lines:"
-            tail -n 250 buildozer-build.log
+            echo "Buildozer failed. Error context:"
+            grep -i -C 8 -E "error:|exception|traceback|failed|what went wrong|execution failed|compile.*failed|manifest|java.lang|cannot find symbol" buildozer-build.log || true
+            echo "Buildozer failed. Last 120 log lines:"
+            tail -n 120 buildozer-build.log
             exit "$status"
           fi
 

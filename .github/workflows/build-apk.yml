@@ -23,8 +23,10 @@ jobs:
           docker pull ghcr.io/kivy/buildozer:latest
           docker run --rm \
             --volume "$PWD":/home/user/hostcwd \
+            --workdir /home/user/hostcwd \
+            --entrypoint bash \
             ghcr.io/kivy/buildozer:latest \
-            --verbose android debug 2>&1 | tee buildozer-build.log
+            -lc "yes | buildozer --verbose android debug" 2>&1 | tee buildozer-build.log
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

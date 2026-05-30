@@ -16,7 +16,7 @@ from kivy.app import App
 from kivy.clock import Clock
 from kivy.core.clipboard import Clipboard
 from kivy.core.window import Window
-from kivy.graphics import Color, RoundedRectangle
+from kivy.graphics import Color, Line, RoundedRectangle
 from kivy.metrics import dp
 from kivy.properties import BooleanProperty, NumericProperty, StringProperty
 from kivy.uix.boxlayout import BoxLayout
@@ -37,19 +37,21 @@ except Exception:  # pragma: no cover - disponivel apenas no Android empacotado
     autoclass = None
 
 
-APP_VERSION = "4.3.1-mobile"
-MAX_NUMBER = 50000
+APP_VERSION = "4.4.0-mobile"
+MAX_NUMBER = 100000
 DEFAULT_INTERVAL_S = 2.2
 MIN_INTERVAL_S = 1.8
 
-COLOR_BG = (0.02, 0.02, 0.025, 1)
-COLOR_PANEL = (0.055, 0.045, 0.05, 1)
-COLOR_CARD = (0.105, 0.085, 0.09, 1)
-COLOR_PRIMARY = (0.86, 0.06, 0.10, 1)
-COLOR_PRIMARY_DARK = (0.48, 0.02, 0.05, 1)
-COLOR_DANGER = (0.72, 0.03, 0.06, 1)
-COLOR_TEXT = (0.98, 0.95, 0.94, 1)
-COLOR_MUTED = (0.78, 0.60, 0.60, 1)
+COLOR_BG = (0.015, 0.045, 0.085, 1)
+COLOR_PANEL = (0.035, 0.065, 0.115, 0.96)
+COLOR_CARD = (0.045, 0.075, 0.13, 0.95)
+COLOR_INPUT = (0.025, 0.052, 0.095, 1)
+COLOR_BORDER = (0.16, 0.22, 0.34, 0.88)
+COLOR_PRIMARY = (0.95, 0.10, 0.22, 1)
+COLOR_PRIMARY_DARK = (0.55, 0.02, 0.13, 1)
+COLOR_DANGER = (0.86, 0.07, 0.18, 1)
+COLOR_TEXT = (0.98, 0.98, 1.0, 1)
+COLOR_MUTED = (0.62, 0.66, 0.76, 1)
 
 UNIDADES = (
     "",
@@ -207,21 +209,25 @@ class AndroidBridge:
 
 
 class Card(BoxLayout):
-    def __init__(self, bg_color=COLOR_CARD, radius=8, **kwargs):
+    def __init__(self, bg_color=COLOR_CARD, radius=8, border_color=COLOR_BORDER, **kwargs):
         super().__init__(**kwargs)
         self.orientation = "vertical"
         self.padding = dp(14)
         self.spacing = dp(10)
         self._bg_color = bg_color
+        self._border_color = border_color
         self._radius = [dp(radius)]
         with self.canvas.before:
             Color(*self._bg_color)
             self._bg = RoundedRectangle(pos=self.pos, size=self.size, radius=self._radius)
+            Color(*self._border_color)
+            self._border = Line(rounded_rectangle=(self.x, self.y, self.width, self.height, dp(radius)), width=1)
         self.bind(pos=self._sync_bg, size=self._sync_bg)
 
     def _sync_bg(self, *_args):
         self._bg.pos = self.pos
         self._bg.size = self.size
+        self._border.rounded_rectangle = (self.x, self.y, self.width, self.height, self._radius[0])
 
 
 class AutoJJSMobile(FloatLayout):
@@ -243,44 +249,54 @@ class AutoJJSMobile(FloatLayout):
         self._refresh()
 
     def _build_ui(self) -> None:
+        self.scroll = ScrollView(do_scroll_x=False)
         self.main = BoxLayout(
             orientation="vertical",
-            padding=[dp(16), dp(14), dp(16), dp(14)],
-            spacing=dp(12),
+            padding=[dp(22), dp(20), dp(22), dp(24)],
+            spacing=dp(16),
+            size_hint_y=None,
         )
-        self.add_widget(self.main)
+        self.main.bind(minimum_height=self.main.setter("height"))
+        self.scroll.add_widget(self.main)
+        self.add_widget(self.scroll)
 
         self._build_header()
         self._build_preview()
-        self._build_history()
         self._build_floating_menu()
+        self._build_history()
 
     def _build_header(self) -> None:
-        top = BoxLayout(orientation="vertical", size_hint_y=None, height=dp(96), spacing=dp(4))
+        top = BoxLayout(orientation="vertical", size_hint_y=None, height=dp(152), spacing=dp(8))
         title = Label(
-            text="AUTO JJS",
+            text="[b]AUTO[/b] [color=f21a38][b]JJS[/b][/color]",
             color=COLOR_TEXT,
-            bold=True,
-            font_size="28sp",
+            markup=True,
+            font_size="34sp",
             halign="left",
             valign="middle",
+            size_hint_y=None,
+            height=dp(48),
         )
         title.bind(size=title.setter("text_size"))
         subtitle = Label(
             text=f"Mobile v{APP_VERSION} - limite {MAX_NUMBER}",
             color=COLOR_MUTED,
-            font_size="14sp",
+            font_size="15sp",
             halign="left",
             valign="middle",
+            size_hint_y=None,
+            height=dp(28),
         )
         subtitle.bind(size=subtitle.setter("text_size"))
         credits = Label(
-            text="Criador: Xx0iluminati0xX",
+            text="[color=f21a38]Criador: Xx0iluminati0xX[/color]",
             color=COLOR_PRIMARY,
-            bold=True,
-            font_size="14sp",
+            markup=True,
+            font_size="15sp",
             halign="left",
             valign="middle",
+            size_hint_y=None,
+            height=dp(34),
         )
         credits.bind(size=credits.setter("text_size"))
         top.add_widget(title)
@@ -289,23 +305,24 @@ class AutoJJSMobile(FloatLayout):
         self.main.add_widget(top)
 
     def _build_preview(self) -> None:
-        preview = Card(size_hint_y=None, height=dp(172))
+        preview = Card(bg_color=(0.055, 0.075, 0.125, 0.96), radius=14, size_hint_y=None, height=dp(172))
 
         self.number_label = Label(
             text="1",
             color=COLOR_PRIMARY,
             bold=True,
-            font_size="38sp",
+            font_size="44sp",
             size_hint_y=None,
-            height=dp(48),
+            height=dp(58),
         )
         self.text_label = Label(
-            text="UM!",
+            text="JJS SELECIONADO",
             color=COLOR_TEXT,
-            bold=True,
-            font_size="28sp",
+            font_size="17sp",
             halign="center",
             valign="middle",
+            size_hint_y=None,
+            height=dp(36),
         )
         self.text_label.bind(size=self.text_label.setter("text_size"))
 
@@ -313,7 +330,7 @@ class AutoJJSMobile(FloatLayout):
         self.counter_label = Label(
             text="1 / 100",
             color=COLOR_MUTED,
-            font_size="14sp",
+            font_size="13sp",
             size_hint_y=None,
             height=dp(22),
         )
@@ -338,28 +355,33 @@ class AutoJJSMobile(FloatLayout):
 
         scroll = ScrollView()
         scroll.add_widget(self.history)
-        self.main.add_widget(scroll)
+        history_card = Card(size_hint_y=None, height=dp(130))
+        history_card.add_widget(scroll)
+        self.main.add_widget(history_card)
 
     def _build_floating_menu(self) -> None:
         self.menu_button = ToggleButton(
-            text="FECHAR",
+            text="Menu  =",
             size_hint=(None, None),
-            size=(dp(86), dp(52)),
-            pos_hint={"right": 0.98, "y": 0.02},
-            background_color=COLOR_PRIMARY,
+            size=(dp(126), dp(52)),
+            pos_hint={"right": 0.94, "top": 0.935},
+            background_normal="",
+            background_down="",
+            background_color=COLOR_CARD,
             color=COLOR_TEXT,
             bold=True,
+            font_size="16sp",
         )
         self.menu_button.bind(on_release=self._toggle_menu)
         self.add_widget(self.menu_button)
 
         self.menu = Card(
             bg_color=COLOR_PANEL,
-            radius=8,
-            size_hint=(0.94, 0.78),
-            pos_hint={"center_x": 0.5, "center_y": 0.53},
+            radius=12,
+            size_hint_y=None,
+            height=dp(760),
         )
-        self.add_widget(self.menu)
+        self.main.add_widget(self.menu)
 
         self.menu_content = BoxLayout(orientation="vertical", spacing=dp(10), size_hint_y=None)
         self.menu_content.bind(minimum_height=self.menu_content.setter("height"))
@@ -369,87 +391,101 @@ class AutoJJSMobile(FloatLayout):
 
         self.status = Label(
             text=self.status_text,
-            color=COLOR_MUTED,
-            font_size="14sp",
+            color=COLOR_TEXT,
+            font_size="18sp",
+            bold=True,
+            halign="left",
+            valign="middle",
             size_hint_y=None,
-            height=dp(24),
+            height=dp(34),
         )
+        self.status.bind(size=self.status.setter("text_size"))
         self.menu_content.add_widget(self.status)
 
         mode = Label(
             text="Defina inicio e limite, abra o flutuante e use ENVIAR ou AUTO no app alvo.",
             color=COLOR_MUTED,
-            font_size="13sp",
-            halign="center",
+            font_size="15sp",
+            halign="left",
             valign="middle",
             size_hint_y=None,
-            height=dp(38),
+            height=dp(58),
         )
         mode.bind(size=mode.setter("text_size"))
         self.menu_content.add_widget(mode)
 
-        range_grid = GridLayout(cols=2, spacing=dp(8), size_hint_y=None, height=dp(74))
+        range_grid = GridLayout(cols=2, spacing=dp(10), size_hint_y=None, height=dp(86))
         self.start_input = self._number_input("1")
         self.end_input = self._number_input(str(MAX_NUMBER))
         range_grid.add_widget(self._field("Quantia inicial", self.start_input))
         range_grid.add_widget(self._field("Fazer ate o JJS", self.end_input))
         self.menu_content.add_widget(range_grid)
 
-        row = BoxLayout(orientation="horizontal", spacing=dp(8), size_hint_y=None, height=dp(46))
+        row = BoxLayout(orientation="horizontal", spacing=dp(10), size_hint_y=None, height=dp(58))
         row.add_widget(self._button("Aplicar", self.apply_range, COLOR_PRIMARY_DARK))
-        row.add_widget(self._button("Copiar", self.copy_current, COLOR_PRIMARY_DARK))
+        row.add_widget(self._button("Copiar atual", self.copy_current, COLOR_CARD))
         self.menu_content.add_widget(row)
 
-        perms = BoxLayout(orientation="horizontal", spacing=dp(8), size_hint_y=None, height=dp(46))
+        perms = BoxLayout(orientation="horizontal", spacing=dp(10), size_hint_y=None, height=dp(58))
         perms.add_widget(self._button("Perm. flutuante", self.open_overlay_settings, COLOR_CARD))
         perms.add_widget(self._button("Acessibilidade", self.open_accessibility_settings, COLOR_CARD))
         self.menu_content.add_widget(perms)
 
-        overlay = BoxLayout(orientation="horizontal", spacing=dp(8), size_hint_y=None, height=dp(46))
-        overlay.add_widget(self._button("Abrir flutuante", self.start_overlay_menu, COLOR_PRIMARY))
-        overlay.add_widget(self._button("Fechar flutuante", self.stop_overlay_menu, COLOR_DANGER))
+        overlay = BoxLayout(orientation="horizontal", spacing=dp(10), size_hint_y=None, height=dp(58))
+        overlay.add_widget(self._button("Abrir menu flutuante", self.start_overlay_menu, COLOR_CARD))
+        overlay.add_widget(self._button("Fechar", self.stop_overlay_menu, COLOR_CARD, text_color=COLOR_PRIMARY))
         self.menu_content.add_widget(overlay)
 
-        overlay_off = BoxLayout(orientation="horizontal", spacing=dp(8), size_hint_y=None, height=dp(46))
-        overlay_off.add_widget(self._button("Desativar flutuante", self.disable_overlay_menu, COLOR_DANGER))
+        overlay_off = BoxLayout(orientation="horizontal", spacing=dp(10), size_hint_y=None, height=dp(58))
+        overlay_off.add_widget(self._button("Desativar flutuante", self.disable_overlay_menu, COLOR_CARD, text_color=COLOR_PRIMARY))
         overlay_off.add_widget(self._button("Minimizar app", self._toggle_menu, COLOR_CARD))
         self.menu_content.add_widget(overlay_off)
 
-        nav = BoxLayout(orientation="horizontal", spacing=dp(8), size_hint_y=None, height=dp(46))
+        nav = BoxLayout(orientation="horizontal", spacing=dp(10), size_hint_y=None, height=dp(58))
         nav.add_widget(self._button("< Anterior", self.previous_jj, COLOR_CARD))
         nav.add_widget(self._button("Proximo >", self.next_jj, COLOR_CARD))
         nav.add_widget(self._button("Reset", self.reset_jj, COLOR_CARD))
         self.menu_content.add_widget(nav)
 
-        auto = BoxLayout(orientation="horizontal", spacing=dp(10), size_hint_y=None, height=dp(48))
+        switches = Card(bg_color=COLOR_INPUT, radius=8, size_hint_y=None, height=dp(116))
+        switches.padding = [dp(10), dp(8), dp(10), dp(8)]
+        switches.spacing = dp(8)
+
+        auto = BoxLayout(orientation="horizontal", spacing=dp(10), size_hint_y=None, height=dp(44))
         self.auto_switch = Switch(active=False, size_hint_x=None, width=dp(70))
         self.auto_switch.bind(active=self._on_auto_switch)
         auto.add_widget(self.auto_switch)
-        auto.add_widget(Label(text="Auto interno copia no app", color=COLOR_TEXT, font_size="17sp", halign="left"))
-        self.menu_content.add_widget(auto)
+        auto_label = Label(text="Auto interno copia no app", color=COLOR_TEXT, font_size="15sp", halign="left", valign="middle")
+        auto_label.bind(size=auto_label.setter("text_size"))
+        auto.add_widget(auto_label)
+        switches.add_widget(auto)
 
-        send = BoxLayout(orientation="horizontal", spacing=dp(10), size_hint_y=None, height=dp(48))
+        send = BoxLayout(orientation="horizontal", spacing=dp(10), size_hint_y=None, height=dp(44))
         self.send_switch = Switch(active=True, size_hint_x=None, width=dp(70))
         self.send_switch.bind(active=lambda *_: self.sync_android_config())
         send.add_widget(self.send_switch)
-        send.add_widget(Label(text="Tentar tocar em Enviar", color=COLOR_TEXT, font_size="17sp", halign="left"))
-        self.menu_content.add_widget(send)
+        send_label = Label(text="Tentar tocar em Enviar", color=COLOR_TEXT, font_size="15sp", halign="left", valign="middle")
+        send_label.bind(size=send_label.setter("text_size"))
+        send.add_widget(send_label)
+        switches.add_widget(send)
+        self.menu_content.add_widget(switches)
 
-        speed = BoxLayout(orientation="vertical", spacing=dp(4), size_hint_y=None, height=dp(70))
+        speed = Card(bg_color=COLOR_INPUT, radius=8, size_hint_y=None, height=dp(112))
+        speed.padding = [dp(12), dp(10), dp(12), dp(10)]
         self.interval_label = Label(
             text=f"Intervalo seguro: {self.interval_s:.1f}s",
-            color=COLOR_MUTED,
-            font_size="14sp",
+            color=COLOR_PRIMARY,
+            font_size="15sp",
             size_hint_y=None,
-            height=dp(22),
+            height=dp(28),
         )
-        self.interval_slider = Slider(min=MIN_INTERVAL_S, max=8.0, value=self.interval_s)
+        self.interval_slider = Slider(min=MIN_INTERVAL_S, max=5.0, value=self.interval_s)
         self.interval_slider.bind(value=self._on_interval)
         speed.add_widget(self.interval_label)
         speed.add_widget(self.interval_slider)
         self.menu_content.add_widget(speed)
 
-        self.menu_content.add_widget(self._button("Copiar lista do intervalo", self.copy_range, COLOR_PRIMARY))
+        self.menu_content.add_widget(self._button("Copiar lista do intervalo", self.copy_range, COLOR_CARD, text_color=COLOR_PRIMARY))
 
         guide = Label(
             text=(
@@ -465,7 +501,7 @@ class AutoJJSMobile(FloatLayout):
             valign="top",
             markup=True,
             size_hint_y=None,
-            height=dp(108),
+            height=dp(116),
         )
         guide.bind(size=guide.setter("text_size"))
         self.menu_content.add_widget(guide)
@@ -480,14 +516,18 @@ class AutoJJSMobile(FloatLayout):
         )
         self.menu_content.add_widget(credit)
 
+        self.main.add_widget(self._button("FECHAR", self._toggle_menu, COLOR_CARD, text_color=COLOR_PRIMARY, height=dp(64)))
+
     def _number_input(self, value: str) -> TextInput:
         return TextInput(
             text=value,
             input_filter="int",
             multiline=False,
-            font_size="20sp",
+            font_size="21sp",
             halign="center",
-            background_color=COLOR_PANEL,
+            background_normal="",
+            background_active="",
+            background_color=COLOR_INPUT,
             foreground_color=COLOR_TEXT,
             cursor_color=COLOR_PRIMARY,
             padding=[dp(8), dp(8), dp(8), dp(8)],
@@ -495,19 +535,21 @@ class AutoJJSMobile(FloatLayout):
 
     def _field(self, label: str, widget: TextInput) -> BoxLayout:
         box = BoxLayout(orientation="vertical", spacing=dp(4))
-        box.add_widget(Label(text=label, color=COLOR_MUTED, font_size="13sp", size_hint_y=None, height=dp(22)))
+        box.add_widget(Label(text=label, color=COLOR_MUTED, font_size="14sp", size_hint_y=None, height=dp(24)))
         box.add_widget(widget)
         return box
 
-    def _button(self, text: str, callback, color) -> Button:
+    def _button(self, text: str, callback, color, text_color=COLOR_TEXT, height=None) -> Button:
         btn = Button(
             text=text,
             size_hint_y=None,
-            height=dp(46),
+            height=height or dp(54),
+            background_normal="",
+            background_down="",
             background_color=color,
-            color=COLOR_TEXT,
+            color=text_color,
             bold=True,
-            font_size="13sp",
+            font_size="15sp",
         )
         btn.bind(on_release=lambda *_: callback())
         return btn
@@ -516,7 +558,8 @@ class AutoJJSMobile(FloatLayout):
         self.menu_open = not self.menu_open
         self.menu.opacity = 1 if self.menu_open else 0
         self.menu.disabled = not self.menu_open
-        self.menu_button.text = "FECHAR" if self.menu_open else "MENU"
+        self.menu.height = dp(760) if self.menu_open else 0
+        self.menu_button.text = "Fechar" if self.menu_open else "Menu  ="
 
     def _on_interval(self, _slider, value: float) -> None:
         self.interval_s = round(float(value), 1)
@@ -670,8 +713,8 @@ class AutoJJSMobile(FloatLayout):
     def _refresh(self) -> None:
         text = gerar_jj(self.current_num)
         self.number_label.text = str(self.current_num)
-        self.text_label.text = text
-        self.counter_label.text = f"{self.current_num} / {self.end_num}"
+        self.text_label.text = "JJS SELECIONADO"
+        self.counter_label.text = text
 
         total = max(1, self.end_num - self.start_num)
         self.progress.value = 100 * max(0, self.current_num - self.start_num) / total

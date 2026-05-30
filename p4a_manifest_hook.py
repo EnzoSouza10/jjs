@@ -11,14 +11,7 @@ ET.register_namespace("android", ANDROID_NS)
 
 
 def after_apk_build(toolchain) -> None:
-    manifest_path = Path("AndroidManifest.xml")
     services_path = Path(__file__).with_name("android_manifest_application.xml")
-
-    manifest = ET.parse(manifest_path)
-    root = manifest.getroot()
-    application = root.find("application")
-    if application is None:
-        raise RuntimeError("AndroidManifest.xml has no <application> tag")
 
     fragment = ET.fromstring(
         f'<manifest-fragment xmlns:android="{ANDROID_NS}">'
@@ -26,13 +19,25 @@ def after_apk_build(toolchain) -> None:
         "</manifest-fragment>"
     )
 
-    for service in fragment.findall("service"):
+    for manifest_path in (Path("src/main/AndroidManifest.xml"), Path("AndroidManifest.xml")):
+        if manifest_path.exists():
+            inject_services(manifest_path, fragment)
+
+
+def inject_services(manifest_path: Path, services_fragment: ET.Element) -> None:
+    manifest = ET.parse(manifest_path)
+    root = manifest.getroot()
+    application = root.find("application")
+    if application is None:
+        raise RuntimeError(f"{manifest_path} has no <application> tag")
+
+    for service in services_fragment.findall("service"):
         service_name = service.attrib.get(ANDROID_NAME)
         if not service_name:
             continue
         for existing in application.findall("service"):
             if existing.attrib.get(ANDROID_NAME) == service_name:
                 application.remove(existing)
-        application.append(service)
+        application.append(ET.fromstring(ET.tostring(service, encoding="unicode")))
 
     manifest.write(manifest_path, encoding="utf-8", xml_declaration=True)

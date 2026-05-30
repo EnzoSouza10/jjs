@@ -11,6 +11,7 @@ inserir texto no campo em foco.
 from __future__ import annotations
 
 from functools import lru_cache
+import traceback
 
 from kivy.app import App
 from kivy.clock import Clock
@@ -37,7 +38,7 @@ except Exception:  # pragma: no cover - disponivel apenas no Android empacotado
     autoclass = None
 
 
-APP_VERSION = "4.4.1-mobile"
+APP_VERSION = "4.4.2-mobile"
 MAX_NUMBER = 100000
 DEFAULT_INTERVAL_S = 2.2
 MIN_INTERVAL_S = 1.8
@@ -164,47 +165,49 @@ class AndroidBridge:
         except Exception:
             self.available = False
 
+    def _call(self, method: str, *args, default=False):
+        if not self.available:
+            return default
+        try:
+            return getattr(self.bridge, method)(*args)
+        except Exception:
+            self.available = False
+            return default
+
     def save_config(self, start: int, end: int, current: int, interval: float, auto_click_send: bool) -> bool:
         if not self.available:
             return False
-        self.bridge.saveConfig(self.activity, start, end, current, float(interval), bool(auto_click_send))
-        return True
+        return self._call(
+            "saveConfig",
+            self.activity,
+            start,
+            end,
+            current,
+            float(interval),
+            bool(auto_click_send),
+            default=False,
+        ) is not False
 
     def secure_window(self) -> bool:
-        if not self.available:
-            return False
-        self.bridge.secureWindow(self.activity)
-        return True
+        return self._call("secureWindow", self.activity, default=False) is not False
 
     def start_overlay(self) -> bool:
-        if not self.available:
-            return False
-        self.bridge.startOverlay(self.activity)
-        return True
+        return self._call("startOverlay", self.activity, default=False) is not False
 
     def stop_overlay(self) -> bool:
-        if not self.available:
-            return False
-        self.bridge.stopOverlay(self.activity)
-        return True
+        return self._call("stopOverlay", self.activity, default=False) is not False
 
     def open_overlay_settings(self) -> bool:
-        if not self.available:
-            return False
-        self.bridge.openOverlaySettings(self.activity)
-        return True
+        return self._call("openOverlaySettings", self.activity, default=False) is not False
 
     def open_accessibility_settings(self) -> bool:
-        if not self.available:
-            return False
-        self.bridge.openAccessibilitySettings(self.activity)
-        return True
+        return self._call("openAccessibilitySettings", self.activity, default=False) is not False
 
     def can_draw_overlays(self) -> bool:
-        return bool(self.available and self.bridge.canDrawOverlays(self.activity))
+        return bool(self._call("canDrawOverlays", self.activity, default=False))
 
     def accessibility_enabled(self) -> bool:
-        return bool(self.available and self.bridge.isAccessibilityEnabled(self.activity))
+        return bool(self._call("isAccessibilityEnabled", self.activity, default=False))
 
 
 class Card(BoxLayout):
@@ -732,7 +735,44 @@ class AutoJJSApp(App):
     title = "AUTO JJS"
 
     def build(self):
-        return AutoJJSMobile()
+        try:
+            return AutoJJSMobile()
+        except Exception:
+            return self._build_fallback(traceback.format_exc())
+
+    def _build_fallback(self, error: str):
+        Window.clearcolor = COLOR_BG
+        root = BoxLayout(orientation="vertical", padding=dp(18), spacing=dp(12))
+        title = Label(
+            text="[b]AUTO[/b] [color=f21a38][b]JJS[/b][/color]",
+            markup=True,
+            color=COLOR_TEXT,
+            font_size="30sp",
+            size_hint_y=None,
+            height=dp(56),
+        )
+        message = Label(
+            text="Modo seguro iniciado. Feche e abra o app novamente; se continuar, reinstale a ultima build.",
+            color=COLOR_TEXT,
+            font_size="16sp",
+            halign="center",
+            valign="middle",
+            size_hint_y=None,
+            height=dp(100),
+        )
+        message.bind(size=message.setter("text_size"))
+        details = Label(
+            text=error[-1200:],
+            color=COLOR_MUTED,
+            font_size="10sp",
+            halign="left",
+            valign="top",
+        )
+        details.bind(size=details.setter("text_size"))
+        root.add_widget(title)
+        root.add_widget(message)
+        root.add_widget(details)
+        return root
 
 
 if __name__ == "__main__":

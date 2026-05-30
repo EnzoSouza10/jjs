@@ -16,6 +16,7 @@ android.archs = arm64-v8a, armeabi-v7a
 android.accept_sdk_license = True
 android.add_src = android_src
 android.add_resources = android_res
+android.add_compile_options = "sourceCompatibility = 1.8", "targetCompatibility = 1.8"
 android.extra_manifest_application_arguments = android_manifest_application.xml
 
 [buildozer]

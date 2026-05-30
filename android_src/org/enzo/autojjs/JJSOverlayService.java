@@ -128,7 +128,7 @@ public class JJSOverlayService extends Service {
         row.setOrientation(LinearLayout.HORIZONTAL);
         root.addView(row);
 
-        playButton = button("▶");
+        playButton = button("ON");
         Button sendButton = button("JJS");
         Button nextButton = button("+");
         Button closeButton = button("X");
@@ -164,7 +164,7 @@ public class JJSOverlayService extends Service {
 
     private void toggleRunning() {
         running = !running;
-        playButton.setText(running ? "||" : "▶");
+        playButton.setText(running ? "OFF" : "ON");
         if (running) {
             handler.removeCallbacks(autoStep);
             handler.post(autoStep);

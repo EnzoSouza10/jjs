@@ -37,7 +37,7 @@ except Exception:  # pragma: no cover - disponivel apenas no Android empacotado
     autoclass = None
 
 
-APP_VERSION = "4.2.0-mobile"
+APP_VERSION = "4.2.1-mobile"
 MAX_NUMBER = 50000
 
 COLOR_BG = (0.08, 0.09, 0.10, 1)
@@ -358,6 +358,18 @@ class AutoJJSMobile(FloatLayout):
         )
         self.menu_content.add_widget(self.status)
 
+        mode = Label(
+            text="Configure o limite, abra o flutuante e use ESCREVER ou AUTO no app alvo.",
+            color=COLOR_MUTED,
+            font_size="13sp",
+            halign="center",
+            valign="middle",
+            size_hint_y=None,
+            height=dp(38),
+        )
+        mode.bind(size=mode.setter("text_size"))
+        self.menu_content.add_widget(mode)
+
         range_grid = GridLayout(cols=2, spacing=dp(8), size_hint_y=None, height=dp(74))
         self.start_input = self._number_input("1")
         self.end_input = self._number_input(str(MAX_NUMBER))
@@ -390,7 +402,7 @@ class AutoJJSMobile(FloatLayout):
         self.auto_switch = Switch(active=False, size_hint_x=None, width=dp(70))
         self.auto_switch.bind(active=self._on_auto_switch)
         auto.add_widget(self.auto_switch)
-        auto.add_widget(Label(text="Auto interno copia JJS", color=COLOR_TEXT, font_size="17sp", halign="left"))
+        auto.add_widget(Label(text="Auto interno copia no app", color=COLOR_TEXT, font_size="17sp", halign="left"))
         self.menu_content.add_widget(auto)
 
         send = BoxLayout(orientation="horizontal", spacing=dp(10), size_hint_y=None, height=dp(48))

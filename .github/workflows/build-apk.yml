@@ -26,7 +26,7 @@ jobs:
             --workdir /home/user/hostcwd \
             --entrypoint bash \
             ghcr.io/kivy/buildozer:latest \
-            -lc "yes | buildozer android debug" 2>&1 | tee buildozer-build.log
+            -lc "if command -v apt-get >/dev/null; then apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential g++ pkg-config; fi; yes | buildozer android debug" 2>&1 | tee buildozer-build.log
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ]; then
             echo "Buildozer failed. Error context:"

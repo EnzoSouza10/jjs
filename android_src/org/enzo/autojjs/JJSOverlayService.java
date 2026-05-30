@@ -46,8 +46,10 @@ public class JJSOverlayService extends Service {
             if (!running) {
                 return;
             }
-            sendCurrent(true);
-            handler.postDelayed(this, Math.max(1000, (long) (interval * 1000)));
+            boolean keepGoing = sendCurrent(true);
+            if (keepGoing) {
+                handler.postDelayed(this, Math.max(1000, (long) (interval * 1000)));
+            }
         }
     };
 
@@ -142,7 +144,7 @@ public class JJSOverlayService extends Service {
         root.addView(row);
 
         playButton = button("AUTO");
-        Button sendButton = button("1x");
+        Button sendButton = button("ESCREVER");
         Button nextButton = button("PROX");
         Button closeButton = button("X");
         row.addView(playButton);
@@ -189,7 +191,7 @@ public class JJSOverlayService extends Service {
         }
     }
 
-    private void sendCurrent(boolean fromAuto) {
+    private boolean sendCurrent(boolean fromAuto) {
         String text = JJSText.gerar(current);
         boolean ok = JJSAccessibilityService.sendText(this, text, autoClickSend);
         if (!ok) {
@@ -197,11 +199,22 @@ public class JJSOverlayService extends Service {
             if (fromAuto) {
                 toggleRunning();
             }
-            return;
+            return false;
         }
-        advance();
+        boolean wasLast = current >= end;
+        if (wasLast) {
+            if (fromAuto && running) {
+                running = false;
+                playButton.setText("AUTO");
+                handler.removeCallbacks(autoStep);
+                Toast.makeText(this, "AUTO JJS finalizado", Toast.LENGTH_SHORT).show();
+            }
+        } else {
+            advance();
+        }
         saveCurrent();
         updateTitle();
+        return !wasLast;
     }
 
     private void advance() {

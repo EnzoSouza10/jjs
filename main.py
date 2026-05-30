@@ -3,11 +3,9 @@ AUTO JJS Mobile
 
 Versao adaptada para Android/Buildozer com Kivy.
 
-No celular, um app comum nao consegue controlar o teclado globalmente em
-outros aplicativos como o pynput fazia no computador. Por isso esta versao
-mantem a automacao dentro do app: gera a sequencia, avanca sozinha, copia o
-texto atual para a area de transferencia e oferece um menu flutuante para as
-funcoes principais.
+No celular, o envio em outros apps depende de permissoes explicitas do
+Android: sobrepor apps para mostrar o menu flutuante e Acessibilidade para
+inserir texto no campo em foco.
 """
 
 from __future__ import annotations
@@ -33,8 +31,13 @@ from kivy.uix.switch import Switch
 from kivy.uix.textinput import TextInput
 from kivy.uix.togglebutton import ToggleButton
 
+try:
+    from jnius import autoclass
+except Exception:  # pragma: no cover - disponivel apenas no Android empacotado
+    autoclass = None
 
-APP_VERSION = "4.0.0-mobile"
+
+APP_VERSION = "4.1.0-overlay"
 MAX_NUMBER = 50000
 
 COLOR_BG = (0.08, 0.09, 0.10, 1)
@@ -143,6 +146,58 @@ def gerar_jj(n: int) -> str:
     return f"{numero_por_extenso(n)}!"
 
 
+class AndroidBridge:
+    def __init__(self):
+        self.available = False
+        self.activity = None
+        self.bridge = None
+        if autoclass is None:
+            return
+        try:
+            PythonActivity = autoclass("org.kivy.android.PythonActivity")
+            self.activity = PythonActivity.mActivity
+            self.bridge = autoclass("org.enzo.autojjs.AutoJJSBridge")
+            self.available = True
+        except Exception:
+            self.available = False
+
+    def save_config(self, start: int, end: int, current: int, interval: float, auto_click_send: bool) -> bool:
+        if not self.available:
+            return False
+        self.bridge.saveConfig(self.activity, start, end, current, float(interval), bool(auto_click_send))
+        return True
+
+    def start_overlay(self) -> bool:
+        if not self.available:
+            return False
+        self.bridge.startOverlay(self.activity)
+        return True
+
+    def stop_overlay(self) -> bool:
+        if not self.available:
+            return False
+        self.bridge.stopOverlay(self.activity)
+        return True
+
+    def open_overlay_settings(self) -> bool:
+        if not self.available:
+            return False
+        self.bridge.openOverlaySettings(self.activity)
+        return True
+
+    def open_accessibility_settings(self) -> bool:
+        if not self.available:
+            return False
+        self.bridge.openAccessibilitySettings(self.activity)
+        return True
+
+    def can_draw_overlays(self) -> bool:
+        return bool(self.available and self.bridge.canDrawOverlays(self.activity))
+
+    def accessibility_enabled(self) -> bool:
+        return bool(self.available and self.bridge.isAccessibilityEnabled(self.activity))
+
+
 class Card(BoxLayout):
     def __init__(self, bg_color=COLOR_CARD, radius=8, **kwargs):
         super().__init__(**kwargs)
@@ -174,6 +229,7 @@ class AutoJJSMobile(FloatLayout):
         super().__init__(**kwargs)
         Window.clearcolor = COLOR_BG
         self._timer = None
+        self.android = AndroidBridge()
         self._build_ui()
         self._refresh()
 
@@ -282,7 +338,7 @@ class AutoJJSMobile(FloatLayout):
             bg_color=COLOR_PANEL,
             radius=8,
             size_hint=(0.92, None),
-            height=dp(370),
+            height=dp(520),
             pos_hint={"center_x": 0.5, "y": 0.10},
         )
         self.add_widget(self.menu)
@@ -308,6 +364,16 @@ class AutoJJSMobile(FloatLayout):
         row.add_widget(self._button("Copiar atual", self.copy_current, COLOR_PRIMARY_DARK))
         self.menu.add_widget(row)
 
+        perms = BoxLayout(orientation="horizontal", spacing=dp(8), size_hint_y=None, height=dp(46))
+        perms.add_widget(self._button("Perm. flutuante", self.open_overlay_settings, COLOR_CARD))
+        perms.add_widget(self._button("Acessibilidade", self.open_accessibility_settings, COLOR_CARD))
+        self.menu.add_widget(perms)
+
+        overlay = BoxLayout(orientation="horizontal", spacing=dp(8), size_hint_y=None, height=dp(46))
+        overlay.add_widget(self._button("Abrir menu flutuante", self.start_overlay_menu, COLOR_PRIMARY))
+        overlay.add_widget(self._button("Fechar", self.stop_overlay_menu, COLOR_DANGER))
+        self.menu.add_widget(overlay)
+
         nav = BoxLayout(orientation="horizontal", spacing=dp(8), size_hint_y=None, height=dp(46))
         nav.add_widget(self._button("Anterior", self.previous_jj, COLOR_CARD))
         nav.add_widget(self._button("Proximo", self.next_jj, COLOR_CARD))
@@ -318,8 +384,15 @@ class AutoJJSMobile(FloatLayout):
         self.auto_switch = Switch(active=False, size_hint_x=None, width=dp(70))
         self.auto_switch.bind(active=self._on_auto_switch)
         auto.add_widget(self.auto_switch)
-        auto.add_widget(Label(text="JJS automatico", color=COLOR_TEXT, font_size="17sp", halign="left"))
+        auto.add_widget(Label(text="JJS automatico dentro do app", color=COLOR_TEXT, font_size="17sp", halign="left"))
         self.menu.add_widget(auto)
+
+        send = BoxLayout(orientation="horizontal", spacing=dp(10), size_hint_y=None, height=dp(48))
+        self.send_switch = Switch(active=True, size_hint_x=None, width=dp(70))
+        self.send_switch.bind(active=lambda *_: self.sync_android_config())
+        send.add_widget(self.send_switch)
+        send.add_widget(Label(text="Tentar tocar em Enviar", color=COLOR_TEXT, font_size="17sp", halign="left"))
+        self.menu.add_widget(send)
 
         speed = BoxLayout(orientation="vertical", spacing=dp(4), size_hint_y=None, height=dp(70))
         self.interval_label = Label(
@@ -329,7 +402,7 @@ class AutoJJSMobile(FloatLayout):
             size_hint_y=None,
             height=dp(22),
         )
-        self.interval_slider = Slider(min=0.3, max=5.0, value=self.interval_s)
+        self.interval_slider = Slider(min=1.0, max=8.0, value=self.interval_s)
         self.interval_slider.bind(value=self._on_interval)
         speed.add_widget(self.interval_label)
         speed.add_widget(self.interval_slider)
@@ -376,6 +449,7 @@ class AutoJJSMobile(FloatLayout):
     def _on_interval(self, _slider, value: float) -> None:
         self.interval_s = round(float(value), 1)
         self.interval_label.text = f"Intervalo: {self.interval_s:.1f}s"
+        self.sync_android_config()
         if self.running:
             self._restart_timer()
 
@@ -407,6 +481,7 @@ class AutoJJSMobile(FloatLayout):
         self.current_num = self.start_num
         self._set_status("Intervalo aplicado")
         self._refresh()
+        self.sync_android_config()
         return True
 
     def start_auto(self) -> None:
@@ -467,6 +542,53 @@ class AutoJJSMobile(FloatLayout):
         Clipboard.copy("\n".join(gerar_jj(n) for n in range(start, end + 1)))
         self._set_status(f"Lista copiada: {start} ate {end}")
 
+    def sync_android_config(self) -> bool:
+        auto_click_send = getattr(self, "send_switch", None)
+        send_enabled = True if auto_click_send is None else bool(auto_click_send.active)
+        return self.android.save_config(
+            int(self.start_num),
+            int(self.end_num),
+            int(self.current_num),
+            float(self.interval_s),
+            send_enabled,
+        )
+
+    def open_overlay_settings(self) -> None:
+        if self.android.open_overlay_settings():
+            self._set_status("Ative: Permitir sobrepor a outros apps")
+        else:
+            self._set_status("Permissao flutuante so funciona no APK Android", danger=True)
+
+    def open_accessibility_settings(self) -> None:
+        if self.android.open_accessibility_settings():
+            self._set_status("Ative o servico AUTO JJS em Acessibilidade")
+        else:
+            self._set_status("Acessibilidade so funciona no APK Android", danger=True)
+
+    def start_overlay_menu(self) -> None:
+        if not self.apply_range():
+            return
+        self.sync_android_config()
+        if not self.android.available:
+            self._set_status("Menu flutuante so funciona no APK Android", danger=True)
+            return
+        if not self.android.can_draw_overlays():
+            self.open_overlay_settings()
+            return
+        if not self.android.accessibility_enabled():
+            self.open_accessibility_settings()
+            return
+        if self.android.start_overlay():
+            self._set_status("Menu flutuante ativo")
+        else:
+            self._set_status("Nao foi possivel abrir o menu flutuante", danger=True)
+
+    def stop_overlay_menu(self) -> None:
+        if self.android.stop_overlay():
+            self._set_status("Menu flutuante fechado")
+        else:
+            self._set_status("Menu flutuante so funciona no APK Android", danger=True)
+
     def _refresh(self) -> None:
         text = gerar_jj(self.current_num)
         self.number_label.text = str(self.current_num)
@@ -486,6 +608,8 @@ class AutoJJSMobile(FloatLayout):
             else:
                 lines.append(f"{n:>5}  {item}")
         self.history.text = "\n".join(lines)
+        if hasattr(self, "android"):
+            self.sync_android_config()
 
 
 class AutoJJSApp(App):

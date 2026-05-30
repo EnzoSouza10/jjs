@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_service_description">Permite que o AUTO JJS insira o JJS atual no campo de texto em foco e tente tocar no botao enviar quando voce ativar o menu flutuante.</string>
+</resources>

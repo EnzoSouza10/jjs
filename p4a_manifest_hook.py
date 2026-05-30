@@ -23,6 +23,10 @@ def after_apk_build(toolchain) -> None:
         if manifest_path.exists():
             inject_services(manifest_path, fragment)
 
+    strings_path = Path("src/main/res/values/strings.xml")
+    if strings_path.exists():
+        inject_accessibility_description(strings_path)
+
 
 def inject_services(manifest_path: Path, services_fragment: ET.Element) -> None:
     manifest = ET.parse(manifest_path)
@@ -41,3 +45,23 @@ def inject_services(manifest_path: Path, services_fragment: ET.Element) -> None:
         application.append(ET.fromstring(ET.tostring(service, encoding="unicode")))
 
     manifest.write(manifest_path, encoding="utf-8", xml_declaration=True)
+
+
+def inject_accessibility_description(strings_path: Path) -> None:
+    strings = ET.parse(strings_path)
+    root = strings.getroot()
+    name = "accessibility_service_description"
+    text = (
+        "Permite que o AUTO JJS insira o JJS atual no campo de texto em foco "
+        "e tente tocar no botao enviar quando voce ativar o menu flutuante."
+    )
+
+    for item in root.findall("string"):
+        if item.attrib.get("name") == name:
+            item.text = text
+            break
+    else:
+        item = ET.SubElement(root, "string", {"name": name})
+        item.text = text
+
+    strings.write(strings_path, encoding="utf-8", xml_declaration=True)

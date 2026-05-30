@@ -16,7 +16,7 @@ from kivy.app import App
 from kivy.clock import Clock
 from kivy.core.clipboard import Clipboard
 from kivy.core.window import Window
-from kivy.graphics import Color, Line, RoundedRectangle
+from kivy.graphics import Color, RoundedRectangle
 from kivy.metrics import dp
 from kivy.properties import BooleanProperty, NumericProperty, StringProperty
 from kivy.uix.boxlayout import BoxLayout
@@ -37,7 +37,7 @@ except Exception:  # pragma: no cover - disponivel apenas no Android empacotado
     autoclass = None
 
 
-APP_VERSION = "4.4.0-mobile"
+APP_VERSION = "4.4.1-mobile"
 MAX_NUMBER = 100000
 DEFAULT_INTERVAL_S = 2.2
 MIN_INTERVAL_S = 1.8
@@ -46,7 +46,6 @@ COLOR_BG = (0.015, 0.045, 0.085, 1)
 COLOR_PANEL = (0.035, 0.065, 0.115, 0.96)
 COLOR_CARD = (0.045, 0.075, 0.13, 0.95)
 COLOR_INPUT = (0.025, 0.052, 0.095, 1)
-COLOR_BORDER = (0.16, 0.22, 0.34, 0.88)
 COLOR_PRIMARY = (0.95, 0.10, 0.22, 1)
 COLOR_PRIMARY_DARK = (0.55, 0.02, 0.13, 1)
 COLOR_DANGER = (0.86, 0.07, 0.18, 1)
@@ -209,25 +208,21 @@ class AndroidBridge:
 
 
 class Card(BoxLayout):
-    def __init__(self, bg_color=COLOR_CARD, radius=8, border_color=COLOR_BORDER, **kwargs):
+    def __init__(self, bg_color=COLOR_CARD, radius=8, **kwargs):
         super().__init__(**kwargs)
         self.orientation = "vertical"
         self.padding = dp(14)
         self.spacing = dp(10)
         self._bg_color = bg_color
-        self._border_color = border_color
         self._radius = [dp(radius)]
         with self.canvas.before:
             Color(*self._bg_color)
             self._bg = RoundedRectangle(pos=self.pos, size=self.size, radius=self._radius)
-            Color(*self._border_color)
-            self._border = Line(rounded_rectangle=(self.x, self.y, self.width, self.height, dp(radius)), width=1)
         self.bind(pos=self._sync_bg, size=self._sync_bg)
 
     def _sync_bg(self, *_args):
         self._bg.pos = self.pos
         self._bg.size = self.size
-        self._border.rounded_rectangle = (self.x, self.y, self.width, self.height, self._radius[0])
 
 
 class AutoJJSMobile(FloatLayout):

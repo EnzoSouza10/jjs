@@ -16,7 +16,7 @@ android.ndk_api = 24
 android.archs = arm64-v8a
 android.accept_sdk_license = True
 android.add_src = android_src
-android.add_resources = android_res
+android.add_resources = android_res/xml:xml
 android.add_compile_options = "sourceCompatibility = 1.8", "targetCompatibility = 1.8"
 p4a.hook = p4a_manifest_hook.py
 

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
-    android:description="@string/accessibility_service_description"
+    android:description="Permite que o AUTO JJS insira o JJS atual no campo de texto em foco e tente tocar no botao enviar quando voce ativar o menu flutuante."
     android:accessibilityEventTypes="typeViewFocused|typeWindowContentChanged|typeWindowStateChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:canRetrieveWindowContent="true"

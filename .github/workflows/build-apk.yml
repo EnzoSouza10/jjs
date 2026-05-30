@@ -10,6 +10,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout
@@ -17,11 +19,12 @@ jobs:
 
       - name: Build debug APK
         run: |
+          set -o pipefail
           docker pull ghcr.io/kivy/buildozer:latest
           docker run --rm \
             --volume "$PWD":/home/user/hostcwd \
             ghcr.io/kivy/buildozer:latest \
-            android debug
+            --verbose android debug 2>&1 | tee buildozer-build.log
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
@@ -29,3 +32,11 @@ jobs:
           name: auto-jjs-debug-apk
           path: bin/*.apk
           if-no-files-found: error
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: buildozer-build-log
+          path: buildozer-build.log
+          if-no-files-found: ignore

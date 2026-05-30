@@ -37,7 +37,7 @@ except Exception:  # pragma: no cover - disponivel apenas no Android empacotado
     autoclass = None
 
 
-APP_VERSION = "4.1.0-overlay"
+APP_VERSION = "4.2.0-mobile"
 MAX_NUMBER = 50000
 
 COLOR_BG = (0.08, 0.09, 0.10, 1)
@@ -218,12 +218,12 @@ class Card(BoxLayout):
 
 class AutoJJSMobile(FloatLayout):
     start_num = NumericProperty(1)
-    end_num = NumericProperty(100)
+    end_num = NumericProperty(MAX_NUMBER)
     current_num = NumericProperty(1)
     interval_s = NumericProperty(1.0)
     running = BooleanProperty(False)
     menu_open = BooleanProperty(True)
-    status_text = StringProperty("Pronto")
+    status_text = StringProperty("Pronto para mobile")
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -343,6 +343,12 @@ class AutoJJSMobile(FloatLayout):
         )
         self.add_widget(self.menu)
 
+        self.menu_content = BoxLayout(orientation="vertical", spacing=dp(10), size_hint_y=None)
+        self.menu_content.bind(minimum_height=self.menu_content.setter("height"))
+        menu_scroll = ScrollView(do_scroll_x=False)
+        menu_scroll.add_widget(self.menu_content)
+        self.menu.add_widget(menu_scroll)
+
         self.status = Label(
             text=self.status_text,
             color=COLOR_MUTED,
@@ -350,49 +356,49 @@ class AutoJJSMobile(FloatLayout):
             size_hint_y=None,
             height=dp(24),
         )
-        self.menu.add_widget(self.status)
+        self.menu_content.add_widget(self.status)
 
         range_grid = GridLayout(cols=2, spacing=dp(8), size_hint_y=None, height=dp(74))
         self.start_input = self._number_input("1")
-        self.end_input = self._number_input("100")
+        self.end_input = self._number_input(str(MAX_NUMBER))
         range_grid.add_widget(self._field("Quantia inicial", self.start_input))
         range_grid.add_widget(self._field("Ate qual quantia", self.end_input))
-        self.menu.add_widget(range_grid)
+        self.menu_content.add_widget(range_grid)
 
         row = BoxLayout(orientation="horizontal", spacing=dp(8), size_hint_y=None, height=dp(46))
         row.add_widget(self._button("Aplicar", self.apply_range, COLOR_PRIMARY_DARK))
         row.add_widget(self._button("Copiar atual", self.copy_current, COLOR_PRIMARY_DARK))
-        self.menu.add_widget(row)
+        self.menu_content.add_widget(row)
 
         perms = BoxLayout(orientation="horizontal", spacing=dp(8), size_hint_y=None, height=dp(46))
         perms.add_widget(self._button("Perm. flutuante", self.open_overlay_settings, COLOR_CARD))
         perms.add_widget(self._button("Acessibilidade", self.open_accessibility_settings, COLOR_CARD))
-        self.menu.add_widget(perms)
+        self.menu_content.add_widget(perms)
 
         overlay = BoxLayout(orientation="horizontal", spacing=dp(8), size_hint_y=None, height=dp(46))
         overlay.add_widget(self._button("Abrir menu flutuante", self.start_overlay_menu, COLOR_PRIMARY))
         overlay.add_widget(self._button("Fechar", self.stop_overlay_menu, COLOR_DANGER))
-        self.menu.add_widget(overlay)
+        self.menu_content.add_widget(overlay)
 
         nav = BoxLayout(orientation="horizontal", spacing=dp(8), size_hint_y=None, height=dp(46))
         nav.add_widget(self._button("Anterior", self.previous_jj, COLOR_CARD))
         nav.add_widget(self._button("Proximo", self.next_jj, COLOR_CARD))
         nav.add_widget(self._button("Reset", self.reset_jj, COLOR_CARD))
-        self.menu.add_widget(nav)
+        self.menu_content.add_widget(nav)
 
         auto = BoxLayout(orientation="horizontal", spacing=dp(10), size_hint_y=None, height=dp(48))
         self.auto_switch = Switch(active=False, size_hint_x=None, width=dp(70))
         self.auto_switch.bind(active=self._on_auto_switch)
         auto.add_widget(self.auto_switch)
-        auto.add_widget(Label(text="JJS automatico dentro do app", color=COLOR_TEXT, font_size="17sp", halign="left"))
-        self.menu.add_widget(auto)
+        auto.add_widget(Label(text="Auto interno copia JJS", color=COLOR_TEXT, font_size="17sp", halign="left"))
+        self.menu_content.add_widget(auto)
 
         send = BoxLayout(orientation="horizontal", spacing=dp(10), size_hint_y=None, height=dp(48))
         self.send_switch = Switch(active=True, size_hint_x=None, width=dp(70))
         self.send_switch.bind(active=lambda *_: self.sync_android_config())
         send.add_widget(self.send_switch)
         send.add_widget(Label(text="Tentar tocar em Enviar", color=COLOR_TEXT, font_size="17sp", halign="left"))
-        self.menu.add_widget(send)
+        self.menu_content.add_widget(send)
 
         speed = BoxLayout(orientation="vertical", spacing=dp(4), size_hint_y=None, height=dp(70))
         self.interval_label = Label(
@@ -406,9 +412,9 @@ class AutoJJSMobile(FloatLayout):
         self.interval_slider.bind(value=self._on_interval)
         speed.add_widget(self.interval_label)
         speed.add_widget(self.interval_slider)
-        self.menu.add_widget(speed)
+        self.menu_content.add_widget(speed)
 
-        self.menu.add_widget(self._button("Copiar lista do intervalo", self.copy_range, COLOR_PRIMARY))
+        self.menu_content.add_widget(self._button("Copiar lista do intervalo", self.copy_range, COLOR_PRIMARY))
 
     def _number_input(self, value: str) -> TextInput:
         return TextInput(
@@ -432,6 +438,8 @@ class AutoJJSMobile(FloatLayout):
     def _button(self, text: str, callback, color) -> Button:
         btn = Button(
             text=text,
+            size_hint_y=None,
+            height=dp(46),
             background_color=color,
             color=COLOR_TEXT,
             bold=True,

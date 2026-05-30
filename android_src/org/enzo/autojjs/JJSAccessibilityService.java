@@ -2,7 +2,10 @@ package org.enzo.autojjs;
 
 import android.accessibilityservice.AccessibilityService;
 import android.content.Context;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 
@@ -11,6 +14,7 @@ import java.util.Locale;
 
 public class JJSAccessibilityService extends AccessibilityService {
     private static JJSAccessibilityService instance;
+    private final Handler handler = new Handler(Looper.getMainLooper());
 
     @Override
     public void onServiceConnected() {
@@ -37,7 +41,11 @@ public class JJSAccessibilityService extends AccessibilityService {
         }
         boolean inserted = instance.insertIntoFocusedField(text);
         if (inserted && clickSend) {
-            instance.clickLikelySendButton();
+            instance.handler.postDelayed(() -> {
+                if (!instance.clickLikelySendButton()) {
+                    instance.pressImeEnter();
+                }
+            }, 220);
         }
         return inserted;
     }
@@ -57,13 +65,8 @@ public class JJSAccessibilityService extends AccessibilityService {
             return false;
         }
 
-        CharSequence current = focus.getText();
-        String next = current == null || current.length() == 0
-            ? text
-            : current.toString() + text;
-
         Bundle args = new Bundle();
-        args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, next);
+        args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text);
         boolean ok = focus.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args);
         focus.recycle();
         root.recycle();
@@ -105,6 +108,30 @@ public class JJSAccessibilityService extends AccessibilityService {
         return clicked;
     }
 
+    private boolean pressImeEnter() {
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        if (root == null) {
+            return false;
+        }
+
+        AccessibilityNodeInfo focus = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
+        if (focus == null || !focus.isEditable()) {
+            focus = findEditableNode(root);
+        }
+        if (focus == null) {
+            root.recycle();
+            return false;
+        }
+
+        boolean ok = false;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            ok = focus.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.getId());
+        }
+        focus.recycle();
+        root.recycle();
+        return ok;
+    }
+
     private AccessibilityNodeInfo findSendButton(AccessibilityNodeInfo root) {
         ArrayDeque<AccessibilityNodeInfo> queue = new ArrayDeque<>();
         queue.add(AccessibilityNodeInfo.obtain(root));
@@ -135,8 +162,10 @@ public class JJSAccessibilityService extends AccessibilityService {
         String lower = value.toLowerCase(Locale.ROOT);
         return "send".equals(lower)
             || "enviar".equals(lower)
+            || "mandar".equals(lower)
             || lower.contains("send message")
-            || lower.contains("enviar mensagem");
+            || lower.contains("enviar mensagem")
+            || lower.contains("mandar mensagem");
     }
 
     private String valueOf(CharSequence value) {

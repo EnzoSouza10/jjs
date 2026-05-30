@@ -8,6 +8,7 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
@@ -30,6 +31,7 @@ public class JJSOverlayService extends Service {
     private WindowManager.LayoutParams params;
     private LinearLayout root;
     private TextView title;
+    private TextView preview;
     private Button playButton;
     private boolean running;
     private int start = 1;
@@ -115,22 +117,33 @@ public class JJSOverlayService extends Service {
 
         root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(18, 14, 18, 14);
-        root.setBackgroundColor(Color.argb(230, 28, 34, 38));
+        root.setPadding(16, 14, 16, 14);
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(Color.argb(238, 22, 28, 31));
+        bg.setCornerRadius(18);
+        bg.setStroke(2, Color.rgb(30, 150, 200));
+        root.setBackground(bg);
 
         title = new TextView(this);
         title.setTextColor(Color.WHITE);
-        title.setTextSize(14);
+        title.setTextSize(13);
         title.setGravity(Gravity.CENTER);
         root.addView(title);
+
+        preview = new TextView(this);
+        preview.setTextColor(Color.rgb(190, 235, 255));
+        preview.setTextSize(12);
+        preview.setGravity(Gravity.CENTER);
+        preview.setSingleLine(true);
+        root.addView(preview);
 
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         root.addView(row);
 
-        playButton = button("ON");
-        Button sendButton = button("JJS");
-        Button nextButton = button("+");
+        playButton = button("AUTO");
+        Button sendButton = button("1x");
+        Button nextButton = button("PROX");
         Button closeButton = button("X");
         row.addView(playButton);
         row.addView(sendButton);
@@ -154,17 +167,20 @@ public class JJSOverlayService extends Service {
         Button button = new Button(this);
         button.setText(text);
         button.setTextColor(Color.WHITE);
-        button.setTextSize(13);
+        button.setTextSize(12);
         button.setAllCaps(false);
-        button.setMinWidth(64);
+        button.setMinWidth(66);
         button.setMinHeight(48);
-        button.setBackgroundColor(Color.rgb(18, 120, 170));
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(Color.rgb(18, 112, 156));
+        bg.setCornerRadius(10);
+        button.setBackground(bg);
         return button;
     }
 
     private void toggleRunning() {
         running = !running;
-        playButton.setText(running ? "OFF" : "ON");
+        playButton.setText(running ? "PARAR" : "AUTO");
         if (running) {
             handler.removeCallbacks(autoStep);
             handler.post(autoStep);
@@ -207,7 +223,10 @@ public class JJSOverlayService extends Service {
 
     private void updateTitle() {
         if (title != null) {
-            title.setText(current + " / " + end);
+            title.setText((running ? "AUTO LIGADO  " : "AUTO JJS  ") + current + " / " + end);
+        }
+        if (preview != null) {
+            preview.setText(JJSText.gerar(current));
         }
     }
 

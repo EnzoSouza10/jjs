@@ -11,6 +11,7 @@ import android.text.TextUtils;
 public final class AutoJJSBridge {
     public static final String PREFS = "auto_jjs";
     public static final String ACTION_CONFIG_CHANGED = "org.enzo.autojjs.CONFIG_CHANGED";
+    public static final float MIN_INTERVAL_SECONDS = 1.8f;
 
     private AutoJJSBridge() {
     }
@@ -19,7 +20,7 @@ public final class AutoJJSBridge {
         int safeStart = clamp(start, 1, JJSText.MAX_NUMBER);
         int safeEnd = clamp(end, safeStart, JJSText.MAX_NUMBER);
         int safeCurrent = clamp(current, safeStart, safeEnd);
-        float safeInterval = Math.max(1.0f, intervalSeconds);
+        float safeInterval = Math.max(MIN_INTERVAL_SECONDS, intervalSeconds);
 
         prefs(context).edit()
             .putInt("start", safeStart)

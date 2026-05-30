@@ -37,17 +37,19 @@ except Exception:  # pragma: no cover - disponivel apenas no Android empacotado
     autoclass = None
 
 
-APP_VERSION = "4.2.1-mobile"
+APP_VERSION = "4.3.0-mobile"
 MAX_NUMBER = 50000
+DEFAULT_INTERVAL_S = 2.2
+MIN_INTERVAL_S = 1.8
 
-COLOR_BG = (0.08, 0.09, 0.10, 1)
-COLOR_PANEL = (0.13, 0.15, 0.17, 1)
-COLOR_CARD = (0.18, 0.20, 0.22, 1)
-COLOR_PRIMARY = (0.12, 0.55, 0.78, 1)
-COLOR_PRIMARY_DARK = (0.08, 0.38, 0.55, 1)
-COLOR_DANGER = (0.72, 0.18, 0.16, 1)
-COLOR_TEXT = (0.94, 0.96, 0.97, 1)
-COLOR_MUTED = (0.66, 0.72, 0.76, 1)
+COLOR_BG = (0.02, 0.02, 0.025, 1)
+COLOR_PANEL = (0.055, 0.045, 0.05, 1)
+COLOR_CARD = (0.105, 0.085, 0.09, 1)
+COLOR_PRIMARY = (0.86, 0.06, 0.10, 1)
+COLOR_PRIMARY_DARK = (0.48, 0.02, 0.05, 1)
+COLOR_DANGER = (0.72, 0.03, 0.06, 1)
+COLOR_TEXT = (0.98, 0.95, 0.94, 1)
+COLOR_MUTED = (0.78, 0.60, 0.60, 1)
 
 UNIDADES = (
     "",
@@ -220,7 +222,7 @@ class AutoJJSMobile(FloatLayout):
     start_num = NumericProperty(1)
     end_num = NumericProperty(MAX_NUMBER)
     current_num = NumericProperty(1)
-    interval_s = NumericProperty(1.0)
+    interval_s = NumericProperty(DEFAULT_INTERVAL_S)
     running = BooleanProperty(False)
     menu_open = BooleanProperty(True)
     status_text = StringProperty("Pronto para mobile")
@@ -247,7 +249,7 @@ class AutoJJSMobile(FloatLayout):
         self._build_floating_menu()
 
     def _build_header(self) -> None:
-        top = BoxLayout(orientation="vertical", size_hint_y=None, height=dp(78), spacing=dp(4))
+        top = BoxLayout(orientation="vertical", size_hint_y=None, height=dp(96), spacing=dp(4))
         title = Label(
             text="AUTO JJS",
             color=COLOR_TEXT,
@@ -265,8 +267,18 @@ class AutoJJSMobile(FloatLayout):
             valign="middle",
         )
         subtitle.bind(size=subtitle.setter("text_size"))
+        credits = Label(
+            text="Criador: Xx0iluminati0xX",
+            color=COLOR_PRIMARY,
+            bold=True,
+            font_size="14sp",
+            halign="left",
+            valign="middle",
+        )
+        credits.bind(size=credits.setter("text_size"))
         top.add_widget(title)
         top.add_widget(subtitle)
+        top.add_widget(credits)
         self.main.add_widget(top)
 
     def _build_preview(self) -> None:
@@ -338,7 +350,7 @@ class AutoJJSMobile(FloatLayout):
             bg_color=COLOR_PANEL,
             radius=8,
             size_hint=(0.92, None),
-            height=dp(520),
+            height=dp(600),
             pos_hint={"center_x": 0.5, "y": 0.10},
         )
         self.add_widget(self.menu)
@@ -359,7 +371,7 @@ class AutoJJSMobile(FloatLayout):
         self.menu_content.add_widget(self.status)
 
         mode = Label(
-            text="Configure o limite, abra o flutuante e use ESCREVER ou AUTO no app alvo.",
+            text="Guia rapido: defina o inicio e ate quantos JJS fazer, abra o flutuante e use ESCREVER ou AUTO no app alvo.",
             color=COLOR_MUTED,
             font_size="13sp",
             halign="center",
@@ -374,7 +386,7 @@ class AutoJJSMobile(FloatLayout):
         self.start_input = self._number_input("1")
         self.end_input = self._number_input(str(MAX_NUMBER))
         range_grid.add_widget(self._field("Quantia inicial", self.start_input))
-        range_grid.add_widget(self._field("Ate qual quantia", self.end_input))
+        range_grid.add_widget(self._field("Fazer ate o JJS", self.end_input))
         self.menu_content.add_widget(range_grid)
 
         row = BoxLayout(orientation="horizontal", spacing=dp(8), size_hint_y=None, height=dp(46))
@@ -393,8 +405,8 @@ class AutoJJSMobile(FloatLayout):
         self.menu_content.add_widget(overlay)
 
         nav = BoxLayout(orientation="horizontal", spacing=dp(8), size_hint_y=None, height=dp(46))
-        nav.add_widget(self._button("Anterior", self.previous_jj, COLOR_CARD))
-        nav.add_widget(self._button("Proximo", self.next_jj, COLOR_CARD))
+        nav.add_widget(self._button("< JJS anterior", self.previous_jj, COLOR_CARD))
+        nav.add_widget(self._button("Proximo JJS >", self.next_jj, COLOR_CARD))
         nav.add_widget(self._button("Reset", self.reset_jj, COLOR_CARD))
         self.menu_content.add_widget(nav)
 
@@ -414,19 +426,48 @@ class AutoJJSMobile(FloatLayout):
 
         speed = BoxLayout(orientation="vertical", spacing=dp(4), size_hint_y=None, height=dp(70))
         self.interval_label = Label(
-            text="Intervalo: 1.0s",
+            text=f"Intervalo seguro: {self.interval_s:.1f}s",
             color=COLOR_MUTED,
             font_size="14sp",
             size_hint_y=None,
             height=dp(22),
         )
-        self.interval_slider = Slider(min=1.0, max=8.0, value=self.interval_s)
+        self.interval_slider = Slider(min=MIN_INTERVAL_S, max=8.0, value=self.interval_s)
         self.interval_slider.bind(value=self._on_interval)
         speed.add_widget(self.interval_label)
         speed.add_widget(self.interval_slider)
         self.menu_content.add_widget(speed)
 
         self.menu_content.add_widget(self._button("Copiar lista do intervalo", self.copy_range, COLOR_PRIMARY))
+
+        guide = Label(
+            text=(
+                "[b]Botoes:[/b] Aplicar salva o intervalo; Copiar atual copia o JJS exibido; "
+                "Perm. flutuante autoriza o menu sobre outros apps; Acessibilidade permite escrever no campo selecionado; "
+                "Abrir menu flutuante mostra os controles externos; Fechar remove o flutuante; "
+                "JJS anterior/Proximo navegam sem perder a sequencia; Reset volta ao inicio; "
+                "Auto interno copia em ritmo seguro; Tentar tocar em Enviar aciona o botao enviar do app alvo."
+            ),
+            color=COLOR_MUTED,
+            font_size="12sp",
+            halign="left",
+            valign="top",
+            markup=True,
+            size_hint_y=None,
+            height=dp(108),
+        )
+        guide.bind(size=guide.setter("text_size"))
+        self.menu_content.add_widget(guide)
+
+        credit = Label(
+            text="Criador: Xx0iluminati0xX",
+            color=COLOR_PRIMARY,
+            bold=True,
+            font_size="13sp",
+            size_hint_y=None,
+            height=dp(26),
+        )
+        self.menu_content.add_widget(credit)
 
     def _number_input(self, value: str) -> TextInput:
         return TextInput(
@@ -468,7 +509,7 @@ class AutoJJSMobile(FloatLayout):
 
     def _on_interval(self, _slider, value: float) -> None:
         self.interval_s = round(float(value), 1)
-        self.interval_label.text = f"Intervalo: {self.interval_s:.1f}s"
+        self.interval_label.text = f"Intervalo seguro: {self.interval_s:.1f}s"
         self.sync_android_config()
         if self.running:
             self._restart_timer()
@@ -624,7 +665,7 @@ class AutoJJSMobile(FloatLayout):
         for n in range(start, end + 1):
             item = gerar_jj(n)
             if n == self.current_num:
-                lines.append(f"[color=1ed0ff][b]{n:>5}  {item}[/b][/color]")
+                lines.append(f"[color=dc1018][b]{n:>5}  {item}[/b][/color]")
             else:
                 lines.append(f"{n:>5}  {item}")
         self.history.text = "\n".join(lines)

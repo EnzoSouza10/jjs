@@ -6,6 +6,8 @@ import xml.etree.ElementTree as ET
 
 ANDROID_NS = "http://schemas.android.com/apk/res/android"
 ANDROID_NAME = f"{{{ANDROID_NS}}}name"
+ANDROID_ALLOW_BACKUP = f"{{{ANDROID_NS}}}allowBackup"
+ANDROID_USES_CLEARTEXT = f"{{{ANDROID_NS}}}usesCleartextTraffic"
 
 ET.register_namespace("android", ANDROID_NS)
 
@@ -35,6 +37,9 @@ def inject_services(manifest_path: Path, services_fragment: ET.Element) -> None:
     if application is None:
         raise RuntimeError(f"{manifest_path} has no <application> tag")
 
+    application.set(ANDROID_ALLOW_BACKUP, "false")
+    application.set(ANDROID_USES_CLEARTEXT, "false")
+
     for service in services_fragment.findall("service"):
         service_name = service.attrib.get(ANDROID_NAME)
         if not service_name:
@@ -52,8 +57,9 @@ def inject_accessibility_description(strings_path: Path) -> None:
     root = strings.getroot()
     name = "accessibility_service_description"
     text = (
-        "Permite que o AUTO JJS insira o JJS atual no campo de texto em foco "
-        "e tente tocar no botao enviar quando voce ativar o menu flutuante."
+        "Permite que o AUTO JJS, somente quando voce tocar no menu flutuante, "
+        "escreva o JJS atual no campo em foco e tente tocar no botao Enviar. "
+        "O app nao usa internet nem coleta dados."
     )
 
     for item in root.findall("string"):

@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="accessibility_service_description">Permite que o AUTO JJS insira o JJS atual no campo de texto em foco e tente tocar no botao enviar quando voce ativar o menu flutuante.</string>
+    <string name="accessibility_service_description">Permite que o AUTO JJS, somente quando voce tocar no menu flutuante, escreva o JJS atual no campo em foco e tente tocar no botao Enviar. O app nao usa internet nem coleta dados.</string>
 </resources>

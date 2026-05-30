@@ -2,10 +2,7 @@ package org.enzo.autojjs;
 
 import android.accessibilityservice.AccessibilityService;
 import android.content.Context;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 
@@ -14,7 +11,6 @@ import java.util.Locale;
 
 public class JJSAccessibilityService extends AccessibilityService {
     private static JJSAccessibilityService instance;
-    private final Handler handler = new Handler(Looper.getMainLooper());
 
     @Override
     public void onServiceConnected() {
@@ -40,14 +36,21 @@ public class JJSAccessibilityService extends AccessibilityService {
             return false;
         }
         boolean inserted = instance.insertIntoFocusedField(text);
-        if (inserted && clickSend) {
-            instance.handler.postDelayed(() -> {
-                if (!instance.clickLikelySendButton()) {
-                    instance.pressImeEnter();
-                }
-            }, 220);
+        return inserted && (!clickSend || instance.clickLikelySendButton());
+    }
+
+    public static boolean insertText(Context context, String text) {
+        if (instance == null || text == null || text.length() == 0) {
+            return false;
         }
-        return inserted;
+        return instance.insertIntoFocusedField(text);
+    }
+
+    public static boolean clickSend(Context context) {
+        if (instance == null) {
+            return false;
+        }
+        return instance.clickLikelySendButton();
     }
 
     private boolean insertIntoFocusedField(String text) {
@@ -57,8 +60,11 @@ public class JJSAccessibilityService extends AccessibilityService {
         }
 
         AccessibilityNodeInfo focus = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
-        if (focus == null || !focus.isEditable()) {
-            focus = findEditableNode(root);
+        if (focus == null || !isUsableEditable(focus)) {
+            if (focus != null) {
+                focus.recycle();
+            }
+            focus = findSingleEditableNode(root);
         }
         if (focus == null) {
             root.recycle();
@@ -73,14 +79,21 @@ public class JJSAccessibilityService extends AccessibilityService {
         return ok;
     }
 
-    private AccessibilityNodeInfo findEditableNode(AccessibilityNodeInfo root) {
+    private AccessibilityNodeInfo findSingleEditableNode(AccessibilityNodeInfo root) {
         ArrayDeque<AccessibilityNodeInfo> queue = new ArrayDeque<>();
         queue.add(AccessibilityNodeInfo.obtain(root));
+        AccessibilityNodeInfo found = null;
 
         while (!queue.isEmpty()) {
             AccessibilityNodeInfo node = queue.removeFirst();
-            if (node.isEditable()) {
-                return node;
+            if (isUsableEditable(node)) {
+                if (found != null) {
+                    found.recycle();
+                    node.recycle();
+                    recycleQueue(queue);
+                    return null;
+                }
+                found = AccessibilityNodeInfo.obtain(node);
             }
             for (int i = 0; i < node.getChildCount(); i++) {
                 AccessibilityNodeInfo child = node.getChild(i);
@@ -90,7 +103,7 @@ public class JJSAccessibilityService extends AccessibilityService {
             }
             node.recycle();
         }
-        return null;
+        return found;
     }
 
     private boolean clickLikelySendButton() {
@@ -108,38 +121,17 @@ public class JJSAccessibilityService extends AccessibilityService {
         return clicked;
     }
 
-    private boolean pressImeEnter() {
-        AccessibilityNodeInfo root = getRootInActiveWindow();
-        if (root == null) {
-            return false;
-        }
-
-        AccessibilityNodeInfo focus = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
-        if (focus == null || !focus.isEditable()) {
-            focus = findEditableNode(root);
-        }
-        if (focus == null) {
-            root.recycle();
-            return false;
-        }
-
-        boolean ok = false;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            ok = focus.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.getId());
-        }
-        focus.recycle();
-        root.recycle();
-        return ok;
-    }
-
     private AccessibilityNodeInfo findSendButton(AccessibilityNodeInfo root) {
         ArrayDeque<AccessibilityNodeInfo> queue = new ArrayDeque<>();
         queue.add(AccessibilityNodeInfo.obtain(root));
 
         while (!queue.isEmpty()) {
             AccessibilityNodeInfo node = queue.removeFirst();
-            if (node.isClickable() && looksLikeSend(node)) {
-                return node;
+            if (node.isVisibleToUser() && node.isEnabled() && node.isClickable() && looksLikeSend(node)) {
+                AccessibilityNodeInfo target = AccessibilityNodeInfo.obtain(node);
+                node.recycle();
+                recycleQueue(queue);
+                return target;
             }
             for (int i = 0; i < node.getChildCount(); i++) {
                 AccessibilityNodeInfo child = node.getChild(i);
@@ -155,7 +147,8 @@ public class JJSAccessibilityService extends AccessibilityService {
     private boolean looksLikeSend(AccessibilityNodeInfo node) {
         String text = valueOf(node.getText());
         String desc = valueOf(node.getContentDescription());
-        return isSendLabel(text) || isSendLabel(desc);
+        String viewId = valueOf(node.getViewIdResourceName());
+        return isSendLabel(text) || isSendLabel(desc) || isSendId(viewId);
     }
 
     private boolean isSendLabel(String value) {
@@ -166,6 +159,24 @@ public class JJSAccessibilityService extends AccessibilityService {
             || lower.contains("send message")
             || lower.contains("enviar mensagem")
             || lower.contains("mandar mensagem");
+    }
+
+    private boolean isSendId(String value) {
+        String lower = value.toLowerCase(Locale.ROOT);
+        return lower.endsWith("/send")
+            || lower.endsWith("/send_button")
+            || lower.endsWith("/button_send")
+            || lower.contains(":id/send");
+    }
+
+    private boolean isUsableEditable(AccessibilityNodeInfo node) {
+        return node != null && node.isEditable() && node.isVisibleToUser() && node.isEnabled();
+    }
+
+    private void recycleQueue(ArrayDeque<AccessibilityNodeInfo> queue) {
+        while (!queue.isEmpty()) {
+            queue.removeFirst().recycle();
+        }
     }
 
     private String valueOf(CharSequence value) {

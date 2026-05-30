@@ -37,7 +37,7 @@ except Exception:  # pragma: no cover - disponivel apenas no Android empacotado
     autoclass = None
 
 
-APP_VERSION = "4.3.0-mobile"
+APP_VERSION = "4.3.1-mobile"
 MAX_NUMBER = 50000
 DEFAULT_INTERVAL_S = 2.2
 MIN_INTERVAL_S = 1.8
@@ -169,6 +169,12 @@ class AndroidBridge:
         self.bridge.saveConfig(self.activity, start, end, current, float(interval), bool(auto_click_send))
         return True
 
+    def secure_window(self) -> bool:
+        if not self.available:
+            return False
+        self.bridge.secureWindow(self.activity)
+        return True
+
     def start_overlay(self) -> bool:
         if not self.available:
             return False
@@ -232,6 +238,7 @@ class AutoJJSMobile(FloatLayout):
         Window.clearcolor = COLOR_BG
         self._timer = None
         self.android = AndroidBridge()
+        self.android.secure_window()
         self._build_ui()
         self._refresh()
 
@@ -349,9 +356,8 @@ class AutoJJSMobile(FloatLayout):
         self.menu = Card(
             bg_color=COLOR_PANEL,
             radius=8,
-            size_hint=(0.92, None),
-            height=dp(600),
-            pos_hint={"center_x": 0.5, "y": 0.10},
+            size_hint=(0.94, 0.78),
+            pos_hint={"center_x": 0.5, "center_y": 0.53},
         )
         self.add_widget(self.menu)
 
@@ -371,7 +377,7 @@ class AutoJJSMobile(FloatLayout):
         self.menu_content.add_widget(self.status)
 
         mode = Label(
-            text="Guia rapido: defina o inicio e ate quantos JJS fazer, abra o flutuante e use ESCREVER ou AUTO no app alvo.",
+            text="Defina inicio e limite, abra o flutuante e use ENVIAR ou AUTO no app alvo.",
             color=COLOR_MUTED,
             font_size="13sp",
             halign="center",
@@ -391,7 +397,7 @@ class AutoJJSMobile(FloatLayout):
 
         row = BoxLayout(orientation="horizontal", spacing=dp(8), size_hint_y=None, height=dp(46))
         row.add_widget(self._button("Aplicar", self.apply_range, COLOR_PRIMARY_DARK))
-        row.add_widget(self._button("Copiar atual", self.copy_current, COLOR_PRIMARY_DARK))
+        row.add_widget(self._button("Copiar", self.copy_current, COLOR_PRIMARY_DARK))
         self.menu_content.add_widget(row)
 
         perms = BoxLayout(orientation="horizontal", spacing=dp(8), size_hint_y=None, height=dp(46))
@@ -400,13 +406,18 @@ class AutoJJSMobile(FloatLayout):
         self.menu_content.add_widget(perms)
 
         overlay = BoxLayout(orientation="horizontal", spacing=dp(8), size_hint_y=None, height=dp(46))
-        overlay.add_widget(self._button("Abrir menu flutuante", self.start_overlay_menu, COLOR_PRIMARY))
-        overlay.add_widget(self._button("Fechar", self.stop_overlay_menu, COLOR_DANGER))
+        overlay.add_widget(self._button("Abrir flutuante", self.start_overlay_menu, COLOR_PRIMARY))
+        overlay.add_widget(self._button("Fechar flutuante", self.stop_overlay_menu, COLOR_DANGER))
         self.menu_content.add_widget(overlay)
 
+        overlay_off = BoxLayout(orientation="horizontal", spacing=dp(8), size_hint_y=None, height=dp(46))
+        overlay_off.add_widget(self._button("Desativar flutuante", self.disable_overlay_menu, COLOR_DANGER))
+        overlay_off.add_widget(self._button("Minimizar app", self._toggle_menu, COLOR_CARD))
+        self.menu_content.add_widget(overlay_off)
+
         nav = BoxLayout(orientation="horizontal", spacing=dp(8), size_hint_y=None, height=dp(46))
-        nav.add_widget(self._button("< JJS anterior", self.previous_jj, COLOR_CARD))
-        nav.add_widget(self._button("Proximo JJS >", self.next_jj, COLOR_CARD))
+        nav.add_widget(self._button("< Anterior", self.previous_jj, COLOR_CARD))
+        nav.add_widget(self._button("Proximo >", self.next_jj, COLOR_CARD))
         nav.add_widget(self._button("Reset", self.reset_jj, COLOR_CARD))
         self.menu_content.add_widget(nav)
 
@@ -442,11 +453,11 @@ class AutoJJSMobile(FloatLayout):
 
         guide = Label(
             text=(
-                "[b]Botoes:[/b] Aplicar salva o intervalo; Copiar atual copia o JJS exibido; "
+                "[b]Botoes:[/b] Aplicar salva o intervalo; Copiar copia o JJS exibido; "
                 "Perm. flutuante autoriza o menu sobre outros apps; Acessibilidade permite escrever no campo selecionado; "
-                "Abrir menu flutuante mostra os controles externos; Fechar remove o flutuante; "
-                "JJS anterior/Proximo navegam sem perder a sequencia; Reset volta ao inicio; "
-                "Auto interno copia em ritmo seguro; Tentar tocar em Enviar aciona o botao enviar do app alvo."
+                "Abrir mostra os controles externos; Fechar/Desativar remove o flutuante; "
+                "Minimizar app esconde este painel; Anterior/Proximo navegam; Reset volta ao inicio; "
+                "Auto interno copia em ritmo seguro; Tentar tocar em Enviar aciona o envio do app alvo."
             ),
             color=COLOR_MUTED,
             font_size="12sp",
@@ -496,7 +507,7 @@ class AutoJJSMobile(FloatLayout):
             background_color=color,
             color=COLOR_TEXT,
             bold=True,
-            font_size="15sp",
+            font_size="13sp",
         )
         btn.bind(on_release=lambda *_: callback())
         return btn
@@ -647,6 +658,12 @@ class AutoJJSMobile(FloatLayout):
     def stop_overlay_menu(self) -> None:
         if self.android.stop_overlay():
             self._set_status("Menu flutuante fechado")
+        else:
+            self._set_status("Menu flutuante so funciona no APK Android", danger=True)
+
+    def disable_overlay_menu(self) -> None:
+        if self.android.stop_overlay():
+            self.stop_auto("Menu flutuante desativado")
         else:
             self._set_status("Menu flutuante so funciona no APK Android", danger=True)
 

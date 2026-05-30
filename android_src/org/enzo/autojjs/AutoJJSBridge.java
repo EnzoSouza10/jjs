@@ -1,5 +1,6 @@
 package org.enzo.autojjs;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -7,6 +8,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.provider.Settings;
 import android.text.TextUtils;
+import android.view.WindowManager;
 
 public final class AutoJJSBridge {
     public static final String PREFS = "auto_jjs";
@@ -39,6 +41,15 @@ public final class AutoJJSBridge {
 
     public static void stopOverlay(Context context) {
         context.stopService(new Intent(context, JJSOverlayService.class));
+    }
+
+    public static void secureWindow(Context context) {
+        if (context instanceof Activity) {
+            ((Activity) context).getWindow().setFlags(
+                WindowManager.LayoutParams.FLAG_SECURE,
+                WindowManager.LayoutParams.FLAG_SECURE
+            );
+        }
     }
 
     public static void openOverlaySettings(Context context) {

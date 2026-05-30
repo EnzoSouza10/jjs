@@ -23,6 +23,9 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class JJSOverlayService extends Service {
     private static final int NOTIFICATION_ID = 410;
     private static final String CHANNEL_ID = "auto_jjs_overlay";
@@ -38,9 +41,12 @@ public class JJSOverlayService extends Service {
     private TextView preview;
     private TextView credits;
     private Button playButton;
+    private Button miniButton;
     private EditText endInput;
+    private final List<View> expandedViews = new ArrayList<>();
     private boolean running;
     private boolean sending;
+    private boolean minimized;
     private int start = 1;
     private int end = 100;
     private int current = 1;
@@ -90,7 +96,7 @@ public class JJSOverlayService extends Service {
     @Override
     public void onDestroy() {
         running = false;
-        handler.removeCallbacks(autoStep);
+        handler.removeCallbacksAndMessages(null);
         try {
             unregisterReceiver(configReceiver);
         } catch (IllegalArgumentException ignored) {
@@ -114,7 +120,7 @@ public class JJSOverlayService extends Service {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
                 ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
                 : WindowManager.LayoutParams.TYPE_PHONE,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_SECURE,
             PixelFormat.TRANSLUCENT
         );
         params.gravity = Gravity.TOP | Gravity.START;
@@ -130,49 +136,62 @@ public class JJSOverlayService extends Service {
         bg.setStroke(3, Color.rgb(210, 12, 24));
         root.setBackground(bg);
 
+        miniButton = button("JJS");
+        miniButton.setMinWidth(86);
+        miniButton.setTextSize(13);
+        miniButton.setVisibility(View.GONE);
+        miniButton.setOnClickListener(v -> setMinimized(false));
+        root.addView(miniButton);
+
         title = new TextView(this);
         title.setTextColor(Color.WHITE);
         title.setTextSize(14);
         title.setGravity(Gravity.CENTER);
-        root.addView(title);
+        addExpandedView(title);
 
         preview = new TextView(this);
         preview.setTextColor(Color.rgb(255, 210, 210));
         preview.setTextSize(12);
         preview.setGravity(Gravity.CENTER);
         preview.setSingleLine(true);
-        root.addView(preview);
+        addExpandedView(preview);
 
         credits = new TextView(this);
         credits.setTextColor(Color.rgb(224, 20, 34));
         credits.setTextSize(11);
         credits.setGravity(Gravity.CENTER);
         credits.setText("Criador: Xx0iluminati0xX");
-        root.addView(credits);
+        addExpandedView(credits);
 
         TextView help = new TextView(this);
         help.setTextColor(Color.rgb(255, 180, 180));
         help.setTextSize(10);
         help.setGravity(Gravity.CENTER);
-        help.setText("AUTO inicia/parar | ESCREVER envia atual | ANT/PROX navegam | ATE define limite");
-        root.addView(help);
+        help.setText("AUTO inicia/parar | ESCREVER envia | MIN esconde | FECHAR remove");
+        addExpandedView(help);
 
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
-        root.addView(row);
+        addExpandedView(row);
 
         playButton = button("AUTO");
-        Button sendButton = button("ESCREVER");
+        Button sendButton = button("ENVIAR");
         Button prevButton = button("< JJS");
         Button nextButton = button("JJS >");
+        Button minButton = button("MIN");
         row.addView(playButton);
         row.addView(sendButton);
-        row.addView(prevButton);
-        row.addView(nextButton);
+
+        LinearLayout navRow = new LinearLayout(this);
+        navRow.setOrientation(LinearLayout.HORIZONTAL);
+        addExpandedView(navRow);
+        navRow.addView(prevButton);
+        navRow.addView(nextButton);
+        navRow.addView(minButton);
 
         LinearLayout limitRow = new LinearLayout(this);
         limitRow.setOrientation(LinearLayout.HORIZONTAL);
-        root.addView(limitRow);
+        addExpandedView(limitRow);
 
         Button minusEndButton = button("-10");
         endInput = new EditText(this);
@@ -191,12 +210,18 @@ public class JJSOverlayService extends Service {
         endInput.setBackground(endBg);
         Button plusEndButton = button("+10");
         Button applyEndButton = button("OK");
-        Button closeButton = button("X");
         limitRow.addView(minusEndButton);
         limitRow.addView(endInput);
         limitRow.addView(plusEndButton);
         limitRow.addView(applyEndButton);
-        limitRow.addView(closeButton);
+
+        LinearLayout closeRow = new LinearLayout(this);
+        closeRow.setOrientation(LinearLayout.HORIZONTAL);
+        addExpandedView(closeRow);
+        Button disableButton = button("DESATIVAR");
+        Button closeButton = button("FECHAR");
+        closeRow.addView(disableButton);
+        closeRow.addView(closeButton);
 
         playButton.setOnClickListener(v -> toggleRunning());
         sendButton.setOnClickListener(v -> sendCurrent(false));
@@ -213,20 +238,27 @@ public class JJSOverlayService extends Service {
         minusEndButton.setOnClickListener(v -> adjustEndBy(-10));
         plusEndButton.setOnClickListener(v -> adjustEndBy(10));
         applyEndButton.setOnClickListener(v -> applyEndInput());
-        closeButton.setOnClickListener(v -> stopSelf());
+        minButton.setOnClickListener(v -> setMinimized(true));
+        disableButton.setOnClickListener(v -> deactivateOverlay());
+        closeButton.setOnClickListener(v -> closeOverlay());
         root.setOnTouchListener(new DragTouchListener());
 
         updateTitle();
         windowManager.addView(root, params);
     }
 
+    private void addExpandedView(View view) {
+        expandedViews.add(view);
+        root.addView(view);
+    }
+
     private Button button(String text) {
         Button button = new Button(this);
         button.setText(text);
         button.setTextColor(Color.WHITE);
-        button.setTextSize(12);
+        button.setTextSize(11);
         button.setAllCaps(false);
-        button.setMinWidth(72);
+        button.setMinWidth(64);
         button.setMinHeight(48);
         GradientDrawable bg = new GradientDrawable();
         bg.setColor(Color.rgb(164, 10, 20));
@@ -234,6 +266,31 @@ public class JJSOverlayService extends Service {
         bg.setStroke(1, Color.rgb(255, 70, 80));
         button.setBackground(bg);
         return button;
+    }
+
+    private void setMinimized(boolean shouldMinimize) {
+        minimized = shouldMinimize;
+        for (View view : expandedViews) {
+            view.setVisibility(minimized ? View.GONE : View.VISIBLE);
+        }
+        miniButton.setVisibility(minimized ? View.VISIBLE : View.GONE);
+        root.setPadding(minimized ? 8 : 18, minimized ? 8 : 16, minimized ? 8 : 18, minimized ? 8 : 16);
+        updateTitle();
+    }
+
+    private void closeOverlay() {
+        running = false;
+        sending = false;
+        handler.removeCallbacksAndMessages(null);
+        stopSelf();
+    }
+
+    private void deactivateOverlay() {
+        running = false;
+        sending = false;
+        handler.removeCallbacksAndMessages(null);
+        Toast.makeText(this, "Menu flutuante desativado", Toast.LENGTH_SHORT).show();
+        stopSelf();
     }
 
     private void toggleRunning() {
@@ -350,6 +407,9 @@ public class JJSOverlayService extends Service {
     private void updateTitle() {
         if (title != null) {
             title.setText((running ? "AUTO LIGADO  " : "AUTO JJS  ") + current + " / " + end);
+        }
+        if (miniButton != null) {
+            miniButton.setText(running ? "AUTO" : "JJS");
         }
         if (preview != null) {
             preview.setText(JJSText.gerar(current));

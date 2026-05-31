@@ -38,7 +38,7 @@ except Exception:  # pragma: no cover - disponivel apenas no Android empacotado
     autoclass = None
 
 
-APP_VERSION = "4.4.2-mobile"
+APP_VERSION = "4.4.3-mobile"
 MAX_NUMBER = 100000
 DEFAULT_INTERVAL_S = 2.2
 MIN_INTERVAL_S = 1.8
@@ -171,7 +171,6 @@ class AndroidBridge:
         try:
             return getattr(self.bridge, method)(*args)
         except Exception:
-            self.available = False
             return default
 
     def save_config(self, start: int, end: int, current: int, interval: float, auto_click_send: bool) -> bool:
@@ -242,8 +241,8 @@ class AutoJJSMobile(FloatLayout):
         Window.clearcolor = COLOR_BG
         self._timer = None
         self.android = AndroidBridge()
-        self.android.secure_window()
         self._build_ui()
+        Clock.schedule_once(lambda _dt: self.android.secure_window(), 0)
         self._refresh()
 
     def _build_ui(self) -> None:
@@ -359,7 +358,7 @@ class AutoJJSMobile(FloatLayout):
 
     def _build_floating_menu(self) -> None:
         self.menu_button = ToggleButton(
-            text="Menu  =",
+            text="Fechar",
             size_hint=(None, None),
             size=(dp(126), dp(52)),
             pos_hint={"right": 0.94, "top": 0.935},
@@ -377,7 +376,7 @@ class AutoJJSMobile(FloatLayout):
             bg_color=COLOR_PANEL,
             radius=12,
             size_hint_y=None,
-            height=dp(760),
+            height=self._menu_height(),
         )
         self.main.add_widget(self.menu)
 
@@ -549,14 +548,24 @@ class AutoJJSMobile(FloatLayout):
             bold=True,
             font_size="15sp",
         )
-        btn.bind(on_release=lambda *_: callback())
+        btn.bind(on_release=lambda *_: self._run_action(callback))
         return btn
+
+    def _menu_height(self) -> float:
+        screen_height = max(dp(620), Window.height or dp(760))
+        return min(dp(760), screen_height - dp(54))
+
+    def _run_action(self, callback) -> None:
+        try:
+            callback()
+        except Exception as exc:
+            self._set_status(f"Erro: {exc}", danger=True)
 
     def _toggle_menu(self, *_args) -> None:
         self.menu_open = not self.menu_open
         self.menu.opacity = 1 if self.menu_open else 0
         self.menu.disabled = not self.menu_open
-        self.menu.height = dp(760) if self.menu_open else 0
+        self.menu.height = self._menu_height() if self.menu_open else 0
         self.menu_button.text = "Fechar" if self.menu_open else "Menu  ="
 
     def _on_interval(self, _slider, value: float) -> None:
@@ -581,8 +590,9 @@ class AutoJJSMobile(FloatLayout):
 
     def _set_status(self, text: str, danger: bool = False) -> None:
         self.status_text = text
-        self.status.text = text
-        self.status.color = COLOR_DANGER if danger else COLOR_MUTED
+        if hasattr(self, "status"):
+            self.status.text = text
+            self.status.color = COLOR_DANGER if danger else COLOR_MUTED
 
     def apply_range(self) -> bool:
         try:
@@ -594,7 +604,6 @@ class AutoJJSMobile(FloatLayout):
         self.current_num = self.start_num
         self._set_status("Intervalo aplicado")
         self._refresh()
-        self.sync_android_config()
         return True
 
     def start_auto(self) -> None:
@@ -641,9 +650,10 @@ class AutoJJSMobile(FloatLayout):
         self._set_status("Sequencia reiniciada")
 
     def copy_current(self, silent: bool = False) -> None:
-        Clipboard.copy(gerar_jj(self.current_num))
+        text = gerar_jj(self.current_num)
+        Clipboard.copy(text)
         if not silent:
-            self._set_status(f"Copiado: {gerar_jj(self.current_num)}")
+            self._set_status(f"Copiado: {text}")
 
     def copy_range(self) -> None:
         try:

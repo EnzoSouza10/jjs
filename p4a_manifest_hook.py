@@ -13,6 +13,14 @@ ET.register_namespace("android", ANDROID_NS)
 
 
 def after_apk_build(toolchain) -> None:
+    patch_android_project()
+
+
+def before_apk_assemble(toolchain) -> None:
+    patch_android_project()
+
+
+def patch_android_project() -> None:
     services_path = Path(__file__).with_name("android_manifest_application.xml")
 
     fragment = ET.fromstring(

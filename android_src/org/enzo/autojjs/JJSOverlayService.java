@@ -47,6 +47,7 @@ public class JJSOverlayService extends Service {
     private boolean running;
     private boolean sending;
     private boolean minimized;
+    private boolean focusable;
     private int start = 1;
     private int end = 100;
     private int current = 1;
@@ -208,6 +209,7 @@ public class JJSOverlayService extends Service {
         endBg.setCornerRadius(10);
         endBg.setStroke(1, Color.rgb(255, 70, 80));
         endInput.setBackground(endBg);
+        endInput.setOnFocusChangeListener((view, hasFocus) -> setOverlayFocusable(hasFocus));
         Button plusEndButton = button("+10");
         Button applyEndButton = button("OK");
         limitRow.addView(minusEndButton);
@@ -385,9 +387,26 @@ public class JJSOverlayService extends Service {
                 .apply();
             updateTitle();
             Toast.makeText(this, "Limite atualizado: " + end, Toast.LENGTH_SHORT).show();
+            endInput.clearFocus();
         } catch (NumberFormatException ex) {
             Toast.makeText(this, "Digite um limite valido", Toast.LENGTH_SHORT).show();
             updateTitle();
+        }
+    }
+
+    private void setOverlayFocusable(boolean shouldFocus) {
+        if (params == null || windowManager == null || root == null || focusable == shouldFocus) {
+            return;
+        }
+        focusable = shouldFocus;
+        if (focusable) {
+            params.flags &= ~WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+        } else {
+            params.flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+        }
+        try {
+            windowManager.updateViewLayout(root, params);
+        } catch (IllegalArgumentException ignored) {
         }
     }
 

@@ -57,7 +57,7 @@ UNIDADES = (
     "",
     "UM",
     "DOIS",
-    "TRES",
+    "TRÊS",
     "QUATRO",
     "CINCO",
     "SEIS",
@@ -721,7 +721,7 @@ class AutoJJSMobile(FloatLayout):
     def _refresh(self) -> None:
         text = gerar_jj(self.current_num)
         self.number_label.text = str(self.current_num)
-        self.text_label.text = "JJS SELECIONADO"
+        self.text_label.text = text
         self.counter_label.text = text
 
         total = max(1, self.end_num - self.start_num)

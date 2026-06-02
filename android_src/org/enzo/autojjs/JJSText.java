@@ -4,7 +4,7 @@ public final class JJSText {
     public static final int MAX_NUMBER = 100000;
 
     private static final String[] UNIDADES = {
-        "", "UM", "DOIS", "TRES", "QUATRO", "CINCO", "SEIS", "SETE", "OITO",
+        "", "UM", "DOIS", "TRÊS", "QUATRO", "CINCO", "SEIS", "SETE", "OITO",
         "NOVE", "DEZ", "ONZE", "DOZE", "TREZE", "QUATORZE", "QUINZE",
         "DEZESSEIS", "DEZESSETE", "DEZOITO", "DEZENOVE"
     };

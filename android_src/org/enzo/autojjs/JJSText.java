@@ -43,7 +43,7 @@ public final class JJSText {
         }
         if (resto > 0) {
             if (out.length() > 0) {
-                out.append(resto <= 100 ? " E " : " ");
+                out.append(resto <= 100 || resto % 100 == 0 ? " E " : " ");
             }
             out.append(grupo(resto));
         }

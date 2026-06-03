@@ -139,7 +139,7 @@ def numero_por_extenso(n: int) -> str:
     if milhares:
         partes.append("MIL" if milhares == 1 else f"{_grupo(milhares)} MIL")
     if resto:
-        if milhares and resto <= 100:
+        if milhares and (resto <= 100 or resto % 100 == 0):
             partes.append("E")
         partes.append(_grupo(resto))
 

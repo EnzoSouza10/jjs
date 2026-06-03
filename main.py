@@ -139,7 +139,7 @@ def numero_por_extenso(n: int) -> str:
     if milhares:
         partes.append("MIL" if milhares == 1 else f"{_grupo(milhares)} MIL")
     if resto:
-        if milhares:
+        if milhares and resto <= 100:
             partes.append("E")
         partes.append(_grupo(resto))
 
@@ -313,7 +313,7 @@ class AutoJJSMobile(FloatLayout):
             height=dp(58),
         )
         self.text_label = Label(
-            text="JJS SELECIONADO",
+            text="UM!",
             color=COLOR_TEXT,
             font_size="17sp",
             halign="center",
@@ -722,7 +722,7 @@ class AutoJJSMobile(FloatLayout):
         text = gerar_jj(self.current_num)
         self.number_label.text = str(self.current_num)
         self.text_label.text = text
-        self.counter_label.text = text
+        self.counter_label.text = f"{self.current_num} / {self.end_num}"
 
         total = max(1, self.end_num - self.start_num)
         self.progress.value = 100 * max(0, self.current_num - self.start_num) / total

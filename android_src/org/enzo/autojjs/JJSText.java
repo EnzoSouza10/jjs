@@ -42,7 +42,7 @@ public final class JJSText {
             out.append(milhares == 1 ? "MIL" : grupo(milhares) + " MIL");
         }
         if (resto > 0) {
-            if (out.length() > 0) {
+            if (out.length() > 0 && resto <= 100) {
                 out.append(" E ");
             }
             out.append(grupo(resto));

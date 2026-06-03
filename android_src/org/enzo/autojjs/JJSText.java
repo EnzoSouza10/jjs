@@ -42,8 +42,8 @@ public final class JJSText {
             out.append(milhares == 1 ? "MIL" : grupo(milhares) + " MIL");
         }
         if (resto > 0) {
-            if (out.length() > 0 && resto <= 100) {
-                out.append(" E ");
+            if (out.length() > 0) {
+                out.append(resto <= 100 ? " E " : " ");
             }
             out.append(grupo(resto));
         }

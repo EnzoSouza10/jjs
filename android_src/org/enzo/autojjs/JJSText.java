@@ -1,7 +1,7 @@
 package org.enzo.autojjs;
 
 public final class JJSText {
-    public static final int MAX_NUMBER = 100000;
+    public static final int MAX_NUMBER = 20000;
 
     private static final String[] UNIDADES = {
         "", "UM", "DOIS", "TRÊS", "QUATRO", "CINCO", "SEIS", "SETE", "OITO",

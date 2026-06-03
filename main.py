@@ -39,7 +39,7 @@ except Exception:  # pragma: no cover - disponivel apenas no Android empacotado
 
 
 APP_VERSION = "4.4.3-mobile"
-MAX_NUMBER = 100000
+MAX_NUMBER = 20000
 DEFAULT_INTERVAL_S = 2.2
 MIN_INTERVAL_S = 1.8
 
@@ -325,7 +325,7 @@ class AutoJJSMobile(FloatLayout):
 
         self.progress = ProgressBar(max=100, value=0, size_hint_y=None, height=dp(8))
         self.counter_label = Label(
-            text="1 / 100",
+            text="1 / 20000",
             color=COLOR_MUTED,
             font_size="13sp",
             size_hint_y=None,
